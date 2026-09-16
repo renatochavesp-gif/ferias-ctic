@@ -411,7 +411,7 @@
     shell.innerHTML =
       '<header class="top">' +
         '<div class="brand">' +
-          '<span class="eyebrow">CTIC · Coordenação de Tecnologia</span>' +
+          '<span class="eyebrow">CTIC · Coordenadoria de Tecnologia da Informação e Comunicação</span>' +
           '<h1>Agenda de Férias</h1>' +
           '<span class="sub">Inclusão e acompanhamento de férias, licenças e banco de horas por equipe</span>' +
         '</div>' +
@@ -427,7 +427,7 @@
         '<button data-tab="equipes" class="'+(state.tab==="equipes"?"active":"")+'">Equipes &amp; colaboradores</button>' +
       '</nav>' +
       '<main id="app">'+bodyHtml+'</main>' +
-      '<footer class="note">Dados armazenados no Supabase (banco próprio) — acesso restrito a e-mails cadastrados como colaboradores.</footer>';
+      '<footer class="note">Acesso restrito a servidores e colaboradores da CTIC</footer>';
 
     document.getElementById("btn-logout").addEventListener("click", function(){ supa.auth.signOut(); });
     document.getElementById("tabs").addEventListener("click", function(e){
