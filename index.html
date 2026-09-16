@@ -190,6 +190,48 @@
     bancoHoras:      {label:"Banco de horas",    ink:"var(--bh)"},
     trabalhaRecesso: {label:"Trabalha no recesso", ink:"var(--tr)"}
   };
+
+  // Feriados nacionais + locais do DF. Datas móveis calculadas a partir da Páscoa
+  // (algoritmo gregoriano de Meeus/Jones/Butcher).
+  function easterUTC(year){
+    var a = year % 19, b = Math.floor(year/100), c = year % 100;
+    var d = Math.floor(b/4), e = b % 4, f = Math.floor((b+8)/25);
+    var g = Math.floor((b-f+1)/3), h = (19*a + b - d - g + 15) % 30;
+    var i = Math.floor(c/4), k = c % 4;
+    var l = (32 + 2*e + 2*i - h - k) % 7;
+    var m = Math.floor((a + 11*h + 22*l)/451);
+    var monthDay = h + l - 7*m + 114;
+    var month = Math.floor(monthDay/31); // 3=março, 4=abril (0-based: 2 ou 3)
+    var day = (monthDay % 31) + 1;
+    return Date.UTC(year, month-1, day);
+  }
+  var _feriadosCache = {};
+  function feriadosDoAno(year){
+    if (_feriadosCache[year]) return _feriadosCache[year];
+    var map = {};
+    function add(m0, d, nome){ map[toISO(year, m0, d)] = nome; }
+    add(0,1,"Confraternização Universal");
+    add(3,21,"Tiradentes / Fundação de Brasília");
+    add(4,1,"Dia do Trabalho");
+    add(8,7,"Independência do Brasil");
+    add(9,12,"Nossa Senhora Aparecida");
+    add(10,2,"Finados");
+    add(10,15,"Proclamação da República");
+    add(10,20,"Dia da Consciência Negra");
+    add(10,30,"Dia do Evangélico (DF)");
+    add(11,25,"Natal");
+    var easter = easterUTC(year);
+    function fromEaster(offsetDays, nome){
+      var t = new Date(easter + offsetDays*86400000);
+      map[toISO(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate())] = nome;
+    }
+    fromEaster(-48, "Carnaval");
+    fromEaster(-47, "Carnaval");
+    fromEaster(-2, "Sexta-feira Santa");
+    fromEaster(60, "Corpus Christi (DF)");
+    _feriadosCache[year] = map;
+    return map;
+  }
   var TIPO_SIGLA = { ferias:null, licenca:"L", bancoHoras:"BH", trabalhaRecesso:"TR" };
   var WEEKDAY_LETTERS = ["D","S","T","Q","Q","S","S"];
   var PAPEL_LABEL = {chefe:"Chefe", substituto:"Substituto", servidor:"Servidor", estagiario:"Estagiário"};
@@ -438,12 +480,16 @@
     var daysInMonth = new Date(Date.UTC(state.viewYear, state.viewMonth+1, 0)).getUTCDate();
     var today = todayISO();
 
+    var feriados = feriadosDoAno(state.viewYear);
     var headCells = "", dayNums = "";
     for (var d=1; d<=daysInMonth; d++){
       var wd = new Date(Date.UTC(state.viewYear, state.viewMonth, d)).getUTCDay();
-      var weekend = (wd===0 || wd===6);
-      headCells += '<th class="'+(weekend?"weekend":"")+'">'+WEEKDAY_LETTERS[wd]+'</th>';
-      dayNums += '<th class="'+(weekend?"weekend":"")+'">'+pad2(d)+'</th>';
+      var isoHead = toISO(state.viewYear, state.viewMonth, d);
+      var feriadoHead = feriados[isoHead];
+      var weekend = (wd===0 || wd===6) || !!feriadoHead;
+      var titleAttr = feriadoHead ? ' title="'+esc(feriadoHead)+'"' : '';
+      headCells += '<th class="'+(weekend?"weekend":"")+'"'+titleAttr+'>'+WEEKDAY_LETTERS[wd]+'</th>';
+      dayNums += '<th class="'+(weekend?"weekend":"")+'"'+titleAttr+'>'+pad2(d)+'</th>';
     }
 
     var bodyRows = membros.map(function(m){
@@ -451,7 +497,8 @@
       for (var d=1; d<=daysInMonth; d++){
         var iso = toISO(state.viewYear, state.viewMonth, d);
         var wd = new Date(Date.UTC(state.viewYear, state.viewMonth, d)).getUTCDay();
-        var weekend = (wd===0 || wd===6);
+        var feriadoNome = feriados[iso];
+        var weekend = (wd===0 || wd===6) || !!feriadoNome;
         var isToday = (iso === today);
         var entry = feriasDoColaborador(m.id).find(function(f){ return iso >= f.inicio && iso <= f.fim; });
         var fillHtml = "";
@@ -469,7 +516,8 @@
         var conflito = warnings.conflito.some(function(w){ return iso>=w.inicio && iso<=w.fim; });
         if (overLimite) flagHtml = '<span class="flag" style="background:var(--danger)" title="Excesso de servidores em férias"></span>';
         else if (conflito) flagHtml = '<span class="flag" style="background:var(--warn)" title="Chefe e substituto de férias juntos"></span>';
-        cells += '<td class="day'+(weekend?" weekend":"")+(isToday?" today":"")+'">'+fillHtml+flagHtml+'</td>';
+        var tdTitle = feriadoNome ? ' title="'+esc(feriadoNome)+'"' : '';
+        cells += '<td class="day'+(weekend?" weekend":"")+(isToday?" today":"")+'"'+tdTitle+'>'+fillHtml+flagHtml+'</td>';
       }
       return '<tr><td class="namecol">'+esc(m.nome)+' <span class="pill '+m.papel+'">'+PAPEL_LABEL[m.papel]+'</span></td>'+cells+'</tr>';
     }).join("");
@@ -526,6 +574,7 @@
           '<span class="item"><span class="swatch" style="background:var(--tr)"></span>Trabalha no recesso (TR)</span>' +
           '<span class="item"><span class="swatch" style="background:var(--danger)"></span>Excesso de férias (E)</span>' +
           '<span class="item"><span class="swatch" style="background:var(--warn)"></span>Chefe + substituto (C)</span>' +
+          '<span class="item"><span class="swatch" style="background:var(--surface-2); border-color:var(--border);"></span>Feriado (passe o mouse para ver qual)</span>' +
         '</div>' +
       '</div>' +
       '<div class="grid-2">' +
