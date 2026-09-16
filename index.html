@@ -114,6 +114,7 @@
   .pill.chefe{background:var(--accent-soft); color:var(--accent-ink);}
   .pill.substituto{background:var(--tr-soft); color:var(--tr);}
   .pill.servidor{background:var(--surface-2); color:var(--ink-muted);}
+  .pill.estagiario{background:var(--bh-soft); color:var(--bh);}
 
   .legend{display:flex; flex-wrap:wrap; gap:12px 18px; font-size:12.5px; color:var(--ink-muted); padding-top:12px; margin-top:12px; border-top:1px solid var(--border);}
   .legend .item{display:flex; align-items:center; gap:6px;}
@@ -191,7 +192,7 @@
   };
   var TIPO_SIGLA = { ferias:null, licenca:"L", bancoHoras:"BH", trabalhaRecesso:"TR" };
   var WEEKDAY_LETTERS = ["D","S","T","Q","Q","S","S"];
-  var PAPEL_LABEL = {chefe:"Chefe", substituto:"Substituto", servidor:"Servidor"};
+  var PAPEL_LABEL = {chefe:"Chefe", substituto:"Substituto", servidor:"Servidor", estagiario:"Estagiário"};
   var YEAR_HUES = ["#2b7a6b","#3a72b8","#a8681c","#7a5aa8","#b8483a","#4a8f3c"];
 
   function pad2(n){ return String(n).padStart(2,"0"); }
@@ -695,7 +696,7 @@
       var equipeSel = '<select data-action="set-equipe" data-id="'+id+'">' + equipeIds.map(function(eid){
         return '<option value="'+eid+'"'+(eid===c.equipe_id?" selected":"")+'>'+esc(state.equipes[eid].nome)+'</option>';
       }).join("") + '</select>';
-      var papelSel = '<select data-action="set-papel" data-id="'+id+'">' + ["servidor","chefe","substituto"].map(function(p){
+      var papelSel = '<select data-action="set-papel" data-id="'+id+'">' + ["servidor","chefe","substituto","estagiario"].map(function(p){
         return '<option value="'+p+'"'+(p===c.papel?" selected":"")+'>'+PAPEL_LABEL[p]+'</option>';
       }).join("") + '</select>';
       var emailInput = '<input type="email" placeholder="email@gmail.com" style="width:170px" value="'+esc(c.email||"")+'" data-action="set-email" data-id="'+id+'">';
@@ -733,7 +734,7 @@
           '<div class="field"><label for="cl-mat">Matrícula</label><input id="cl-mat" required></div>' +
           '<div class="field"><label for="cl-email">E-mail Google</label><input id="cl-email" type="email" placeholder="email@gmail.com"></div>' +
           '<div class="field"><label for="cl-equipe">Equipe</label><select id="cl-equipe">'+equipeIds.map(function(eid){ return '<option value="'+eid+'">'+esc(state.equipes[eid].nome)+'</option>'; }).join("")+'</select></div>' +
-          '<div class="field"><label for="cl-papel">Papel</label><select id="cl-papel">'+["servidor","chefe","substituto"].map(function(p){return '<option value="'+p+'">'+PAPEL_LABEL[p]+'</option>';}).join("")+'</select></div>' +
+          '<div class="field"><label for="cl-papel">Papel</label><select id="cl-papel">'+["servidor","chefe","substituto","estagiario"].map(function(p){return '<option value="'+p+'">'+PAPEL_LABEL[p]+'</option>';}).join("")+'</select></div>' +
           '<div class="field"><label for="cl-saldo">Saldo inicial ('+thisYear+')</label><input id="cl-saldo" type="number" min="0" value="30"></div>' +
           '<div class="field"><button class="btn secondary" type="submit">Adicionar colaborador</button></div>' +
         '</form>' +

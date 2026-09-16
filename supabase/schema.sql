@@ -13,7 +13,7 @@ create table if not exists colaboradores (
   nome text not null,
   matricula text not null,
   equipe_id text not null references equipes(id),
-  papel text not null default 'servidor' check (papel in ('servidor','chefe','substituto')),
+  papel text not null default 'servidor' check (papel in ('servidor','chefe','substituto','estagiario')),
   email text,
   saldos jsonb not null default '{}'::jsonb
 );
