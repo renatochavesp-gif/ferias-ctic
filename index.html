@@ -401,6 +401,7 @@
   // colunas obrigatórias (nome, matrícula, equipe) que um upsert parcial deixaria de fora
   // e faria a gravação falhar silenciosamente.
   function updateColaborador(id, patch){ return supa.from("colaboradores").update(patch).eq("id", id); }
+  function updateEquipe(id, patch){ return supa.from("equipes").update(patch).eq("id", id); }
   function addFerias(data){ return supa.from("ferias").insert(data); }
   function deleteFerias(id){ return supa.from("ferias").delete().eq("id", id); }
   function deleteColaborador(id){ return supa.from("colaboradores").delete().eq("id", id); }
@@ -736,8 +737,15 @@
     var equipesRows = equipeIds.map(function(id){
       var eq = state.equipes[id];
       var n = colaboradoresDaEquipe(id).length;
-      return '<tr><td>'+esc(eq.nome)+'</td><td class="tabular">'+esc(eq.limite)+'</td><td class="muted">'+n+' colaborador(es)</td>' +
-        '<td><button class="btn danger" data-action="del-equipe" data-id="'+id+'" '+(n?"disabled title=\"Remova os colaboradores primeiro\"":"")+'>Remover</button></td></tr>';
+      return '<tr data-row-id="'+id+'">' +
+        '<td><input data-field="nome" data-id="'+id+'" value="'+esc(eq.nome)+'" style="width:140px"></td>' +
+        '<td class="tabular"><input type="number" min="1" data-field="limite" data-id="'+id+'" value="'+esc(eq.limite)+'" style="width:70px"></td>' +
+        '<td class="muted">'+n+' colaborador(es)</td>' +
+        '<td style="white-space:nowrap; display:flex; gap:6px;">' +
+          '<button class="btn secondary" data-action="save-equipe" data-id="'+id+'">Salvar</button>' +
+          '<button class="btn danger" data-action="del-equipe" data-id="'+id+'" '+(n?"disabled title=\"Remova os colaboradores primeiro\"":"")+'>Remover</button>' +
+        '</td>' +
+      '</tr>';
     }).join("");
 
     var colabIds = Object.keys(state.colaboradores).sort(function(a,b){ return state.colaboradores[a].nome.localeCompare(state.colaboradores[b].nome); });
@@ -825,6 +833,23 @@
     }
 
     app.querySelectorAll('[data-action="del-equipe"]').forEach(function(btn){ btn.addEventListener("click", function(){ if (!btn.disabled) deleteEquipe(btn.dataset.id).then(refreshAndRender); }); });
+    app.querySelectorAll('[data-action="save-equipe"]').forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var id = btn.dataset.id;
+        var row = btn.closest("tr");
+        var nome = row.querySelector('[data-field="nome"]').value.trim();
+        var limite = Number(row.querySelector('[data-field="limite"]').value) || 1;
+        if (!nome){ mostrarStatusColab(btn, "O nome não pode ficar vazio.", true); return; }
+
+        btn.disabled = true; var textoOriginal = btn.textContent; btn.textContent = "Salvando…";
+        updateEquipe(id, {nome:nome, limite:limite}).then(function(res){
+          btn.disabled = false; btn.textContent = textoOriginal;
+          if (res.error){ mostrarStatusColab(btn, "Erro ao salvar: "+res.error.message, true); return; }
+          mostrarStatusColab(btn, "Salvo!", false);
+          setTimeout(refreshAndRender, 700);
+        });
+      });
+    });
     app.querySelectorAll('[data-action="del-colab"]').forEach(function(btn){
       btn.addEventListener("click", function(){
         if (btn.dataset.confirming){ deleteColaborador(btn.dataset.id).then(refreshAndRender); }
