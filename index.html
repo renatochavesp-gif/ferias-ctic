@@ -397,6 +397,10 @@
 
   function saveEquipe(id, data){ return supa.from("equipes").upsert(Object.assign({id:id}, data)); }
   function saveColaborador(id, data){ return supa.from("colaboradores").upsert(Object.assign({id:id}, data)); }
+  // Update (não upsert) para edições de colaboradores já existentes: colaboradores tem
+  // colunas obrigatórias (nome, matrícula, equipe) que um upsert parcial deixaria de fora
+  // e faria a gravação falhar silenciosamente.
+  function updateColaborador(id, patch){ return supa.from("colaboradores").update(patch).eq("id", id); }
   function addFerias(data){ return supa.from("ferias").insert(data); }
   function deleteFerias(id){ return supa.from("ferias").delete().eq("id", id); }
   function deleteColaborador(id){ return supa.from("colaboradores").delete().eq("id", id); }
@@ -742,24 +746,27 @@
 
     var colabRows = colabIds.map(function(id){
       var c = state.colaboradores[id];
-      var equipeSel = '<select data-action="set-equipe" data-id="'+id+'">' + equipeIds.map(function(eid){
+      var equipeSel = '<select data-field="equipe" data-id="'+id+'">' + equipeIds.map(function(eid){
         return '<option value="'+eid+'"'+(eid===c.equipe_id?" selected":"")+'>'+esc(state.equipes[eid].nome)+'</option>';
       }).join("") + '</select>';
-      var papelSel = '<select data-action="set-papel" data-id="'+id+'">' + ["servidor","chefe","substituto","estagiario"].map(function(p){
+      var papelSel = '<select data-field="papel" data-id="'+id+'">' + ["servidor","chefe","substituto","estagiario"].map(function(p){
         return '<option value="'+p+'"'+(p===c.papel?" selected":"")+'>'+PAPEL_LABEL[p]+'</option>';
       }).join("") + '</select>';
-      var emailInput = '<input type="email" placeholder="email@gmail.com" style="width:170px" value="'+esc(c.email||"")+'" data-action="set-email" data-id="'+id+'">';
+      var emailInput = '<input type="email" placeholder="email@gmail.com" style="width:170px" value="'+esc(c.email||"")+'" data-field="email" data-id="'+id+'">';
       var saldosInputs = years.map(function(y){
         var v = (c.saldos && c.saldos[y]!=null) ? c.saldos[y] : "";
-        return '<input type="number" min="0" style="width:56px" value="'+esc(v)+'" data-action="set-saldo" data-id="'+id+'" data-year="'+y+'" title="Saldo '+y+'">';
+        return '<input type="number" min="0" style="width:56px" value="'+esc(v)+'" data-field="saldo" data-id="'+id+'" data-year="'+y+'" title="Saldo '+y+'">';
       }).join(" ");
-      return '<tr>' +
+      return '<tr data-row-id="'+id+'">' +
         '<td>'+esc(c.nome)+'<div class="meta muted">Matrícula '+esc(c.matricula)+'</div></td>' +
         '<td>'+emailInput+'</td>' +
         '<td>'+equipeSel+'</td>' +
         '<td>'+papelSel+'</td>' +
         '<td class="tabular">'+saldosInputs+'</td>' +
-        '<td><button class="btn danger" data-action="del-colab" data-id="'+id+'">Remover</button></td>' +
+        '<td style="white-space:nowrap; display:flex; gap:6px;">' +
+          '<button class="btn secondary" data-action="save-colab" data-id="'+id+'">Salvar</button>' +
+          '<button class="btn danger" data-action="del-colab" data-id="'+id+'">Remover</button>' +
+        '</td>' +
       '</tr>';
     }).join("");
 
@@ -824,26 +831,46 @@
         else { btn.dataset.confirming="1"; btn.textContent="Confirmar?"; setTimeout(function(){btn.dataset.confirming="";btn.textContent="Remover";},4000); }
       });
     });
-    app.querySelectorAll('[data-action="set-equipe"]').forEach(function(sel){
-      sel.addEventListener("change", function(){ saveColaborador(sel.dataset.id, {equipe_id: sel.value}).then(refreshAndRender); });
-    });
-    app.querySelectorAll('[data-action="set-papel"]').forEach(function(sel){
-      sel.addEventListener("change", function(){ saveColaborador(sel.dataset.id, {papel: sel.value}).then(refreshAndRender); });
-    });
-    app.querySelectorAll('[data-action="set-email"]').forEach(function(inp){
-      inp.addEventListener("change", function(){ saveColaborador(inp.dataset.id, {email: inp.value.trim() || null}).then(refreshAndRender); });
-    });
-    app.querySelectorAll('[data-action="set-saldo"]').forEach(function(inp){
-      inp.addEventListener("change", function(){
-        var c = state.colaboradores[inp.dataset.id];
-        var saldos = Object.assign({}, c.saldos);
-        saldos[inp.dataset.year] = Number(inp.value)||0;
-        saveColaborador(inp.dataset.id, {saldos: saldos}).then(refreshAndRender);
+    app.querySelectorAll('[data-action="save-colab"]').forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var id = btn.dataset.id;
+        var row = btn.closest("tr");
+        var email = row.querySelector('[data-field="email"]').value.trim() || null;
+        var equipeId = row.querySelector('[data-field="equipe"]').value;
+        var papel = row.querySelector('[data-field="papel"]').value;
+        var saldos = Object.assign({}, state.colaboradores[id].saldos);
+        row.querySelectorAll('[data-field="saldo"]').forEach(function(inp){ saldos[inp.dataset.year] = Number(inp.value)||0; });
+
+        var emailLower = email ? email.toLowerCase() : null;
+        var duplicado = emailLower && Object.keys(state.colaboradores).some(function(oid){
+          return oid !== id && (state.colaboradores[oid].email||"").toLowerCase() === emailLower;
+        });
+        if (duplicado){ mostrarStatusColab(btn, "Esse e-mail já está em uso por outro colaborador.", true); return; }
+
+        btn.disabled = true; var textoOriginal = btn.textContent; btn.textContent = "Salvando…";
+        updateColaborador(id, {email:email, equipe_id:equipeId, papel:papel, saldos:saldos}).then(function(res){
+          btn.disabled = false; btn.textContent = textoOriginal;
+          if (res.error){ mostrarStatusColab(btn, "Erro ao salvar: "+res.error.message, true); return; }
+          mostrarStatusColab(btn, "Salvo!", false);
+          setTimeout(refreshAndRender, 700);
+        });
       });
     });
   }
 
   async function refreshAndRender(){ await fetchAll(); renderApp(); }
+
+  function mostrarStatusColab(btn, msg, isError){
+    var row = btn.closest("tr");
+    var existing = row.querySelector(".save-status");
+    if (existing) existing.remove();
+    var span = document.createElement("span");
+    span.className = "save-status";
+    span.textContent = msg;
+    span.style.cssText = "font-size:12px; align-self:center; color:" + (isError ? "var(--danger)" : "var(--ok)") + ";";
+    btn.insertAdjacentElement("afterend", span);
+    if (isError){ setTimeout(function(){ if (span.parentNode) span.remove(); }, 6000); }
+  }
 
   // ---------- boot / auth ----------
   async function boot(){
