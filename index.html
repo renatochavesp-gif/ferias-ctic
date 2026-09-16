@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agenda de Férias CTIC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@500;600;700;800&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#f6f7f5; --surface:#ffffff; --surface-2:#eef1ee; --ink:#1b2320; --ink-muted:#5c6864;
+    --border:#dde3df; --accent:#2b7a6b; --accent-ink:#0f4a3f; --accent-soft:#e2f1ec;
+    --ok:#2e7d4f; --ok-soft:#e5f4ea; --warn:#a8681c; --warn-soft:#fbf0dc;
+    --danger:#b8483a; --danger-soft:#fbe8e4; --licenca:#7a5aa8; --licenca-soft:#efe8f7;
+    --bh:#b8862a; --bh-soft:#f8eed7; --tr:#3a72b8; --tr-soft:#e4edf8;
+    --shadow: 0 1px 2px rgba(20,30,26,0.06), 0 8px 24px -12px rgba(20,30,26,0.18);
+    --radius: 10px;
+    --font-display:'Libre Franklin', 'Segoe UI', Arial, sans-serif;
+    --font-body:'Source Sans 3', 'Segoe UI', Arial, sans-serif;
+    --font-mono:'IBM Plex Mono', ui-monospace, 'Courier New', monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#14181a; --surface:#1b2123; --surface-2:#212927; --ink:#eef1ee; --ink-muted:#9aa6a1;
+      --border:#2b3432; --accent:#57c2ab; --accent-ink:#bdeee1; --accent-soft:#193530;
+      --ok:#5fbf85; --ok-soft:#183a2a; --warn:#dba75a; --warn-soft:#3a2f18;
+      --danger:#e08776; --danger-soft:#3e2320; --licenca:#b39ade; --licenca-soft:#2c2438;
+      --bh:#e0b969; --bh-soft:#3a2f18; --tr:#8fb5e6; --tr-soft:#1c2c3d;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--font-body);
+    padding-inline:20px; padding-block:0 40px; min-height:100vh;
+  }
+  h1,h2,h3{font-family:var(--font-display); text-wrap:balance; margin:0;}
+  .tabular{font-variant-numeric:tabular-nums;}
+  a{color:var(--accent);}
+  button{font-family:inherit; cursor:pointer;}
+  select,input{font-family:inherit;}
+  ::selection{background:var(--accent-soft);}
+
+  .shell{max-width:1180px; margin:0 auto;}
+
+  header.top{
+    display:flex; align-items:baseline; justify-content:space-between; gap:16px;
+    padding-block:28px 18px; border-bottom:1px solid var(--border); flex-wrap:wrap;
+  }
+  header.top .brand{display:flex; flex-direction:column; gap:4px;}
+  header.top .brand .eyebrow{
+    font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase;
+    color:var(--accent-ink); background:var(--accent-soft); padding:3px 8px; border-radius:999px; width:fit-content;
+  }
+  header.top h1{font-size:26px; font-weight:800; color:var(--ink);}
+  header.top .sub{color:var(--ink-muted); font-size:14px;}
+  header.top .who{display:flex; align-items:center; gap:10px; font-size:13.5px; color:var(--ink-muted);}
+  header.top .who img{width:28px; height:28px; border-radius:999px;}
+
+  nav.tabs{display:flex; gap:6px; padding-block:16px; flex-wrap:wrap;}
+  nav.tabs button{
+    appearance:none; border:1px solid var(--border); background:var(--surface); color:var(--ink-muted);
+    padding:9px 16px; border-radius:999px; font-size:14px; font-weight:600; transition:all .15s ease;
+  }
+  nav.tabs button:hover{color:var(--ink); border-color:var(--accent);}
+  nav.tabs button.active{background:var(--accent); border-color:var(--accent); color:#fff;}
+  nav.tabs button:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible{
+    outline:2px solid var(--accent); outline-offset:2px;
+  }
+
+  main{display:flex; flex-direction:column; gap:20px; padding-block:8px 40px;}
+  .panel{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:20px; box-shadow:var(--shadow);
+  }
+  .panel > h2{font-size:17px; font-weight:700; margin-bottom:14px;}
+  .panel-head{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; flex-wrap:wrap;}
+  .panel-head h2{margin:0;}
+  .muted{color:var(--ink-muted); font-size:13px;}
+  .hint{color:var(--ink-muted); font-size:12.5px; margin-top:6px;}
+
+  .field{display:flex; flex-direction:column; gap:6px;}
+  .field label{font-size:12.5px; font-weight:600; color:var(--ink-muted); text-transform:uppercase; letter-spacing:.03em;}
+  .field select, .field input{
+    border:1px solid var(--border); border-radius:8px; padding:9px 11px; font-size:14px;
+    background:var(--surface); color:var(--ink);
+  }
+  .form-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:14px; align-items:end;}
+  .btn{
+    appearance:none; border:1px solid var(--accent); background:var(--accent); color:#fff;
+    padding:10px 18px; border-radius:8px; font-weight:700; font-size:14px;
+  }
+  .btn:hover{filter:brightness(1.06);}
+  .btn.secondary{background:transparent; color:var(--accent);}
+  .btn.ghost{background:transparent; border-color:var(--border); color:var(--ink-muted); font-weight:600;}
+  .btn.danger{background:transparent; border-color:var(--danger); color:var(--danger); padding:6px 12px; font-size:13px;}
+  .btn:disabled{opacity:.5; cursor:not-allowed;}
+
+  .alert{border-radius:8px; padding:12px 14px; font-size:13.5px; display:flex; gap:10px; align-items:flex-start;}
+  .alert.warn{background:var(--warn-soft); color:var(--warn); border:1px solid color-mix(in srgb, var(--warn) 35%, transparent);}
+  .alert.danger{background:var(--danger-soft); color:var(--danger); border:1px solid color-mix(in srgb, var(--danger) 35%, transparent);}
+  .alert.ok{background:var(--ok-soft); color:var(--ok); border:1px solid color-mix(in srgb, var(--ok) 35%, transparent);}
+  .alert b{font-weight:700;}
+
+  table{border-collapse:collapse; width:100%; font-size:13.5px;}
+  th{text-align:left; color:var(--ink-muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.02em; padding:8px 10px; border-bottom:1px solid var(--border);}
+  td{padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+
+  .pill{display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border-radius:999px; font-size:12px; font-weight:700;}
+  .pill.chefe{background:var(--accent-soft); color:var(--accent-ink);}
+  .pill.substituto{background:var(--tr-soft); color:var(--tr);}
+  .pill.servidor{background:var(--surface-2); color:var(--ink-muted);}
+
+  .legend{display:flex; flex-wrap:wrap; gap:12px 18px; font-size:12.5px; color:var(--ink-muted); padding-top:12px; margin-top:12px; border-top:1px solid var(--border);}
+  .legend .item{display:flex; align-items:center; gap:6px;}
+  .swatch{width:14px; height:14px; border-radius:4px; display:inline-block; border:1px solid rgba(0,0,0,.08);}
+
+  .cal-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:8px;}
+  table.cal{font-family:var(--font-mono); min-width:100%;}
+  table.cal th, table.cal td{border:1px solid var(--border); padding:0; text-align:center;}
+  table.cal th.namecol, table.cal td.namecol{
+    font-family:var(--font-body); text-align:left; padding:8px 12px; position:sticky; left:0; background:var(--surface);
+    min-width:150px; z-index:1; border-right:2px solid var(--border);
+  }
+  table.cal th{background:var(--surface-2); padding:6px 2px; font-size:11px; color:var(--ink-muted); font-weight:600;}
+  table.cal th.weekend{color:var(--accent-ink);}
+  table.cal td.day{width:30px; height:34px; font-size:11.5px; color:var(--ink-muted); position:relative;}
+  table.cal td.day.weekend{background:var(--surface-2);}
+  table.cal td.day.today{box-shadow:inset 0 0 0 2px var(--accent);}
+  table.cal td.day .fill{position:absolute; inset:2px; border-radius:4px; display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:10.5px;}
+  table.cal td.day .flag{position:absolute; bottom:1px; left:1px; right:1px; height:3px; border-radius:2px;}
+
+  .month-nav{display:flex; align-items:center; gap:10px;}
+  .month-nav button{border:1px solid var(--border); background:var(--surface); border-radius:8px; width:32px; height:32px; font-size:16px; color:var(--ink);}
+  .month-nav .label{font-weight:700; min-width:150px; text-align:center; font-family:var(--font-display);}
+
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+  @media (max-width:760px){ .grid-2{grid-template-columns:1fr;} }
+
+  .empty{color:var(--ink-muted); font-size:13.5px; padding:14px 4px;}
+
+  .list-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 0; border-bottom:1px solid var(--border);}
+  .list-row:last-child{border-bottom:none;}
+  .list-row .meta{font-size:12.5px; color:var(--ink-muted);}
+
+  .saldo-cell{display:flex; flex-direction:column; gap:2px; font-family:var(--font-mono); font-size:12.5px;}
+  .saldo-cell .bar{height:5px; background:var(--surface-2); border-radius:3px; overflow:hidden; width:90px;}
+  .saldo-cell .bar > span{display:block; height:100%; background:var(--accent);}
+
+  .gate{min-height:80vh; display:flex; align-items:center; justify-content:center;}
+  .gate-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:40px 36px; max-width:380px; width:100%; text-align:center;
+  }
+  .gate-card h1{font-size:22px; margin-bottom:8px;}
+  .gate-card p{color:var(--ink-muted); font-size:14px; line-height:1.5; margin:0 0 22px;}
+  .google-btn{
+    display:inline-flex; align-items:center; gap:10px; border:1px solid var(--border); background:var(--surface);
+    color:var(--ink); padding:11px 20px; border-radius:8px; font-weight:600; font-size:14.5px;
+  }
+  .google-btn:hover{border-color:var(--accent);}
+  .google-btn svg{width:18px; height:18px;}
+
+  footer.note{padding-block:10px 30px; color:var(--ink-muted); font-size:12px; text-align:center;}
+</style>
+</head>
+<body>
+
+<div class="shell" id="shell">
+  <div class="empty" style="padding-top:80px; text-align:center;">Carregando…</div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- Supabase config ----------
+  var SUPABASE_URL = "https://hwvwxvfdfsjcmzinvipy.supabase.co";
+  var SUPABASE_ANON_KEY = "sb_publishable_ptUFiY1lZgmw95pe7N_QvQ_A61XgQU6";
+  var supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  var TIPOS = {
+    ferias:          {label:"Férias",            ink:"var(--accent-ink)"},
+    licenca:         {label:"Licença",           ink:"var(--licenca)"},
+    bancoHoras:      {label:"Banco de horas",    ink:"var(--bh)"},
+    trabalhaRecesso: {label:"Trabalha no recesso", ink:"var(--tr)"}
+  };
+  var TIPO_SIGLA = { ferias:null, licenca:"L", bancoHoras:"BH", trabalhaRecesso:"TR" };
+  var WEEKDAY_LETTERS = ["D","S","T","Q","Q","S","S"];
+  var PAPEL_LABEL = {chefe:"Chefe", substituto:"Substituto", servidor:"Servidor"};
+  var YEAR_HUES = ["#2b7a6b","#3a72b8","#a8681c","#7a5aa8","#b8483a","#4a8f3c"];
+
+  function pad2(n){ return String(n).padStart(2,"0"); }
+  function toISO(y,m,d){ return y+"-"+pad2(m+1)+"-"+pad2(d); }
+  function parseISO(s){ var p = s.split("-").map(Number); return {y:p[0], m:p[1]-1, d:p[2]}; }
+  function dateRange(inicio, fim){
+    var a = parseISO(inicio), b = parseISO(fim);
+    var start = Date.UTC(a.y,a.m,a.d), end = Date.UTC(b.y,b.m,b.d);
+    var out = [];
+    for (var t=start; t<=end; t += 86400000){
+      var d = new Date(t);
+      out.push(toISO(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    }
+    return out;
+  }
+  function fmtBR(iso){ var p = parseISO(iso); return pad2(p.d)+"/"+pad2(p.m+1)+"/"+p.y; }
+  function fmtRange(inicio, fim){ return inicio===fim ? fmtBR(inicio) : (fmtBR(inicio)+" – "+fmtBR(fim)); }
+  var MONTH_NAMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  function todayISO(){ var d = new Date(); return toISO(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function esc(s){
+    return String(s==null?"":s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  // ---------- state ----------
+  var state = {
+    session: null,
+    equipes: {}, colaboradores: {}, ferias: {},
+    tab: "acompanhamento",
+    viewEquipeId: null, viewYear: null, viewMonth: null,
+    incluirWarning: null,
+    knownYears: function(){
+      var set = {};
+      Object.keys(state.colaboradores).forEach(function(id){
+        var s = state.colaboradores[id].saldos || {};
+        Object.keys(s).forEach(function(y){ set[y]=true; });
+      });
+      Object.keys(state.ferias).forEach(function(id){
+        var f = state.ferias[id];
+        if (f.ano_referencia) set[String(f.ano_referencia)]=true;
+      });
+      return Object.keys(set).sort();
+    },
+    yearOptions: function(){
+      var known = state.knownYears().map(Number);
+      var nowY = new Date().getFullYear();
+      var set = {}; known.forEach(function(y){set[y]=true;}); set[nowY]=true;
+      var maxY = Math.max.apply(null, known.concat([nowY]));
+      set[maxY+1]=true; set[maxY+2]=true;
+      return Object.keys(set).map(Number).sort(function(a,b){return a-b;}).map(String);
+    }
+  };
+  var todayD = new Date();
+  state.viewYear = todayD.getFullYear();
+  state.viewMonth = todayD.getMonth();
+
+  function yearColor(year){
+    var years = state.knownYears();
+    var idx = years.indexOf(String(year));
+    if (idx < 0) idx = 0;
+    return YEAR_HUES[idx % YEAR_HUES.length];
+  }
+
+  function colaboradoresDaEquipe(equipeId){
+    return Object.keys(state.colaboradores)
+      .filter(function(id){ return state.colaboradores[id].equipe_id === equipeId; })
+      .map(function(id){ return Object.assign({id:id}, state.colaboradores[id]); })
+      .sort(function(a,b){ return a.nome.localeCompare(b.nome); });
+  }
+  function feriasDoColaborador(colabId){
+    return Object.keys(state.ferias)
+      .filter(function(id){ return state.ferias[id].colaborador_id === colabId; })
+      .map(function(id){ return Object.assign({id:id}, state.ferias[id]); })
+      .sort(function(a,b){ return a.inicio < b.inicio ? -1 : 1; });
+  }
+  function calcMarcado(colabId, ano){
+    var total = 0;
+    feriasDoColaborador(colabId).forEach(function(f){
+      if (f.tipo === "ferias" && String(f.ano_referencia) === String(ano)) total += dateRange(f.inicio, f.fim).length;
+    });
+    return total;
+  }
+  function feriasCoverageForEquipe(equipeId){
+    var coverage = {};
+    Object.keys(state.ferias).forEach(function(id){
+      var f = state.ferias[id];
+      if (f.equipe_id !== equipeId || f.tipo !== "ferias") return;
+      dateRange(f.inicio, f.fim).forEach(function(iso){ (coverage[iso] = coverage[iso] || []).push(f.colaborador_id); });
+    });
+    return coverage;
+  }
+  function groupConsecutive(dates){
+    dates.sort();
+    var ranges = []; var i=0;
+    while (i < dates.length){
+      var j=i;
+      while (j+1 < dates.length &&
+             (Date.UTC.apply(null, Object.values(parseISO(dates[j+1]))) - Date.UTC.apply(null, Object.values(parseISO(dates[j]))) === 86400000)){
+        j++;
+      }
+      ranges.push([dates[i], dates[j]]);
+      i = j+1;
+    }
+    return ranges;
+  }
+  function computeWarnings(equipeId){
+    var equipe = state.equipes[equipeId];
+    if (!equipe) return {excesso:[], conflito:[]};
+    var limite = Number(equipe.limite) || 1;
+    var coverage = feriasCoverageForEquipe(equipeId);
+    var excessoDates = Object.keys(coverage).filter(function(iso){ return coverage[iso].length > limite; });
+    var excesso = groupConsecutive(excessoDates).map(function(r){
+      var pessoas = {};
+      dateRange(r[0], r[1]).forEach(function(iso){ (coverage[iso]||[]).forEach(function(cid){ pessoas[cid]=true; }); });
+      var nomes = Object.keys(pessoas).map(function(cid){ return state.colaboradores[cid] ? state.colaboradores[cid].nome : cid; });
+      return {inicio:r[0], fim:r[1], nomes:nomes, limite:limite};
+    });
+    var chefes = colaboradoresDaEquipe(equipeId).filter(function(c){ return c.papel==="chefe"; }).map(function(c){return c.id;});
+    var subs = colaboradoresDaEquipe(equipeId).filter(function(c){ return c.papel==="substituto"; }).map(function(c){return c.id;});
+    var conflitoDates = Object.keys(coverage).filter(function(iso){
+      var set = coverage[iso];
+      return chefes.some(function(c){ return set.indexOf(c)>=0; }) && subs.some(function(s){ return set.indexOf(s)>=0; });
+    });
+    var conflito = groupConsecutive(conflitoDates).map(function(r){ return {inicio:r[0], fim:r[1]}; });
+    return {excesso:excesso, conflito:conflito};
+  }
+
+  // ---------- data access (Supabase) ----------
+  async function fetchAll(){
+    var [eq, co, fe] = await Promise.all([
+      supa.from("equipes").select("*"),
+      supa.from("colaboradores").select("*"),
+      supa.from("ferias").select("*")
+    ]);
+    state.equipes = {}; (eq.data||[]).forEach(function(r){ state.equipes[r.id] = r; });
+    state.colaboradores = {}; (co.data||[]).forEach(function(r){ state.colaboradores[r.id] = r; });
+    state.ferias = {}; (fe.data||[]).forEach(function(r){ state.ferias[r.id] = r; });
+    if (!state.viewEquipeId){
+      var ids = Object.keys(state.equipes);
+      if (ids.length) state.viewEquipeId = ids.sort(function(a,b){return (state.equipes[a].nome||"").localeCompare(state.equipes[b].nome);})[0];
+    }
+  }
+
+  function wireRealtime(){
+    supa.channel("public:all-tables")
+      .on("postgres_changes", {event:"*", schema:"public", table:"equipes"}, applyChange("equipes"))
+      .on("postgres_changes", {event:"*", schema:"public", table:"colaboradores"}, applyChange("colaboradores"))
+      .on("postgres_changes", {event:"*", schema:"public", table:"ferias"}, applyChange("ferias"))
+      .subscribe();
+  }
+  function applyChange(coll){
+    return function(payload){
+      var store = state[coll];
+      if (payload.eventType === "DELETE"){ delete store[payload.old.id]; }
+      else { store[payload.new.id] = payload.new; }
+      render();
+    };
+  }
+
+  function saveEquipe(id, data){ return supa.from("equipes").upsert(Object.assign({id:id}, data)); }
+  function saveColaborador(id, data){ return supa.from("colaboradores").upsert(Object.assign({id:id}, data)); }
+  function addFerias(data){ return supa.from("ferias").insert(data); }
+  function deleteFerias(id){ return supa.from("ferias").delete().eq("id", id); }
+  function deleteColaborador(id){ return supa.from("colaboradores").delete().eq("id", id); }
+  function deleteEquipe(id){ return supa.from("equipes").delete().eq("id", id); }
+
+  // ---------- rendering ----------
+  var shell = document.getElementById("shell");
+
+  function renderShellFrame(bodyHtml){
+    var email = state.session ? state.session.user.email : "";
+    var avatar = state.session && state.session.user.user_metadata ? state.session.user.user_metadata.avatar_url : "";
+    shell.innerHTML =
+      '<header class="top">' +
+        '<div class="brand">' +
+          '<span class="eyebrow">CTIC · Coordenação de Tecnologia</span>' +
+          '<h1>Agenda de Férias</h1>' +
+          '<span class="sub">Inclusão e acompanhamento de férias, licenças e banco de horas por equipe</span>' +
+        '</div>' +
+        '<div class="who">' +
+          (avatar ? '<img src="'+esc(avatar)+'" alt="">' : '') +
+          '<span>'+esc(email)+'</span>' +
+          '<button class="btn ghost" id="btn-logout">Sair</button>' +
+        '</div>' +
+      '</header>' +
+      '<nav class="tabs" id="tabs">' +
+        '<button data-tab="acompanhamento" class="'+(state.tab==="acompanhamento"?"active":"")+'">Acompanhamento</button>' +
+        '<button data-tab="incluir" class="'+(state.tab==="incluir"?"active":"")+'">Incluir férias</button>' +
+        '<button data-tab="equipes" class="'+(state.tab==="equipes"?"active":"")+'">Equipes &amp; colaboradores</button>' +
+      '</nav>' +
+      '<main id="app">'+bodyHtml+'</main>' +
+      '<footer class="note">Dados armazenados no Supabase (banco próprio) — acesso restrito a e-mails cadastrados como colaboradores.</footer>';
+
+    document.getElementById("btn-logout").addEventListener("click", function(){ supa.auth.signOut(); });
+    document.getElementById("tabs").addEventListener("click", function(e){
+      var btn = e.target.closest("button[data-tab]");
+      if (!btn) return;
+      state.tab = btn.dataset.tab; state.incluirWarning = null;
+      renderApp();
+    });
+  }
+
+  function renderLoginGate(){
+    shell.innerHTML =
+      '<div class="gate"><div class="gate-card">' +
+        '<span class="eyebrow" style="display:inline-block;margin-bottom:14px;">CTIC</span>' +
+        '<h1>Agenda de Férias</h1>' +
+        '<p>Entre com sua conta Google para incluir e acompanhar férias, licenças e banco de horas da sua equipe.</p>' +
+        '<button class="google-btn" id="btn-login">' +
+          '<svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6.5 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6.5 29.6 4 24 4c-7.5 0-14 4.2-17.7 10.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.3-5.1l-6.6-5.6C29.6 34.9 26.9 36 24 36c-5.3 0-9.7-3.1-11.3-7.5l-6.6 5.1C9.9 39.7 16.4 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.3 5.5l6.6 5.6C40.5 36.6 44 30.9 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>' +
+          'Entrar com o Google' +
+        '</button>' +
+      '</div></div>';
+    document.getElementById("btn-login").addEventListener("click", function(){
+      supa.auth.signInWithOAuth({ provider: "google", options: { redirectTo: window.location.origin + window.location.pathname } });
+    });
+  }
+
+  function renderUnauthorized(){
+    renderShellFrame(
+      '<div class="panel">' +
+        '<h2>Acesso não autorizado</h2>' +
+        '<p class="empty">Sua conta Google (<b>'+esc(state.session.user.email)+'</b>) ainda não está cadastrada como colaborador. Peça para um administrador te adicionar na aba de colaboradores com esse mesmo e-mail.</p>' +
+      '</div>'
+    );
+  }
+
+  function renderApp(){
+    if (state.tab === "acompanhamento") renderAcompanhamento();
+    else if (state.tab === "incluir") renderIncluir();
+    else renderEquipes();
+  }
+
+  function renderAcompanhamento(){
+    var app = document.getElementById("app");
+    var equipeIds = Object.keys(state.equipes).sort(function(a,b){ return (state.equipes[a].nome||"").localeCompare(state.equipes[b].nome); });
+    if (!equipeIds.length){ app.innerHTML = '<div class="panel"><p class="empty">Nenhuma equipe cadastrada ainda.</p></div>'; return; }
+    if (!state.viewEquipeId || !state.equipes[state.viewEquipeId]) state.viewEquipeId = equipeIds[0];
+    var equipe = state.equipes[state.viewEquipeId];
+    var membros = colaboradoresDaEquipe(state.viewEquipeId);
+    var warnings = computeWarnings(state.viewEquipeId);
+    var daysInMonth = new Date(Date.UTC(state.viewYear, state.viewMonth+1, 0)).getUTCDate();
+    var today = todayISO();
+
+    var headCells = "", dayNums = "";
+    for (var d=1; d<=daysInMonth; d++){
+      var wd = new Date(Date.UTC(state.viewYear, state.viewMonth, d)).getUTCDay();
+      var weekend = (wd===0 || wd===6);
+      headCells += '<th class="'+(weekend?"weekend":"")+'">'+WEEKDAY_LETTERS[wd]+'</th>';
+      dayNums += '<th class="'+(weekend?"weekend":"")+'">'+pad2(d)+'</th>';
+    }
+
+    var bodyRows = membros.map(function(m){
+      var cells = "";
+      for (var d=1; d<=daysInMonth; d++){
+        var iso = toISO(state.viewYear, state.viewMonth, d);
+        var wd = new Date(Date.UTC(state.viewYear, state.viewMonth, d)).getUTCDay();
+        var weekend = (wd===0 || wd===6);
+        var isToday = (iso === today);
+        var entry = feriasDoColaborador(m.id).find(function(f){ return iso >= f.inicio && iso <= f.fim; });
+        var fillHtml = "";
+        if (entry){
+          if (entry.tipo === "ferias"){
+            var col = yearColor(entry.ano_referencia);
+            fillHtml = '<span class="fill" style="background:'+col+'" title="Férias — período '+esc(entry.ano_referencia)+' ('+fmtRange(entry.inicio,entry.fim)+')">'+String(entry.ano_referencia).slice(-2)+'</span>';
+          } else {
+            var t = TIPOS[entry.tipo];
+            fillHtml = '<span class="fill" style="background:'+t.ink+'" title="'+t.label+' ('+fmtRange(entry.inicio,entry.fim)+')">'+TIPO_SIGLA[entry.tipo]+'</span>';
+          }
+        }
+        var flagHtml = "";
+        var overLimite = warnings.excesso.some(function(w){ return iso>=w.inicio && iso<=w.fim; });
+        var conflito = warnings.conflito.some(function(w){ return iso>=w.inicio && iso<=w.fim; });
+        if (overLimite) flagHtml = '<span class="flag" style="background:var(--danger)" title="Excesso de servidores em férias"></span>';
+        else if (conflito) flagHtml = '<span class="flag" style="background:var(--warn)" title="Chefe e substituto de férias juntos"></span>';
+        cells += '<td class="day'+(weekend?" weekend":"")+(isToday?" today":"")+'">'+fillHtml+flagHtml+'</td>';
+      }
+      return '<tr><td class="namecol">'+esc(m.nome)+' <span class="pill '+m.papel+'">'+PAPEL_LABEL[m.papel]+'</span></td>'+cells+'</tr>';
+    }).join("");
+
+    var years = state.yearOptions();
+    var saldoTable = membros.map(function(m){
+      var cols = years.map(function(y){
+        var saldo = (m.saldos && m.saldos[y] != null) ? Number(m.saldos[y]) : null;
+        if (saldo == null) return '<td class="muted">—</td>';
+        var marcado = calcMarcado(m.id, y);
+        var pct = saldo ? Math.min(100, Math.round(marcado/saldo*100)) : 0;
+        var restante = saldo - marcado;
+        return '<td><div class="saldo-cell"><span>'+marcado+'/'+saldo+' dias · '+restante+' restantes</span>'+
+          '<div class="bar"><span style="width:'+pct+'%; background:'+(restante<0?"var(--danger)":"var(--accent)")+'"></span></div></div></td>';
+      }).join("");
+      return '<tr><td>'+esc(m.nome)+'</td>'+cols+'</tr>';
+    }).join("");
+
+    var alertsHtml = "";
+    if (!warnings.excesso.length && !warnings.conflito.length){
+      alertsHtml = '<div class="alert ok">✓ Nenhum conflito encontrado para '+esc(equipe.nome)+' (limite: '+equipe.limite+' de férias por vez).</div>';
+    } else {
+      warnings.excesso.forEach(function(w){
+        alertsHtml += '<div class="alert danger">⚠ <span><b>Excesso de servidores em férias</b> — '+fmtRange(w.inicio,w.fim)+': '+esc(w.nomes.join(", "))+' (limite da equipe: '+w.limite+')</span></div>';
+      });
+      warnings.conflito.forEach(function(w){
+        alertsHtml += '<div class="alert warn">⚠ <span><b>Chefe e substituto de férias juntos</b> — '+fmtRange(w.inicio,w.fim)+'</span></div>';
+      });
+    }
+
+    app.innerHTML =
+      '<div class="panel">' +
+        '<div class="panel-head">' +
+          '<div class="field" style="min-width:220px">' +
+            '<label for="sel-equipe">Equipe</label>' +
+            '<select id="sel-equipe">'+equipeIds.map(function(id){
+              return '<option value="'+id+'"'+(id===state.viewEquipeId?" selected":"")+'>'+esc(state.equipes[id].nome)+' (limite '+state.equipes[id].limite+')</option>';
+            }).join("")+'</select>' +
+          '</div>' +
+          '<div class="month-nav">' +
+            '<button id="mo-prev" aria-label="Mês anterior">‹</button>' +
+            '<span class="label">'+MONTH_NAMES[state.viewMonth]+' '+state.viewYear+'</span>' +
+            '<button id="mo-next" aria-label="Próximo mês">›</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="cal-wrap"><table class="cal"><thead>' +
+          '<tr><th class="namecol">Colaborador</th>'+headCells+'</tr>' +
+          '<tr><th class="namecol tabular">'+daysInMonth+' dias</th>'+dayNums+'</tr>' +
+        '</thead><tbody>'+(bodyRows || '<tr><td class="namecol empty" colspan="1">Sem colaboradores nesta equipe.</td></tr>')+'</tbody></table></div>' +
+        '<div class="legend">' +
+          years.slice(0,6).map(function(y){ return '<span class="item"><span class="swatch" style="background:'+yearColor(y)+'"></span>Férias, período '+y+'</span>'; }).join("") +
+          '<span class="item"><span class="swatch" style="background:var(--licenca)"></span>Licença (L)</span>' +
+          '<span class="item"><span class="swatch" style="background:var(--bh)"></span>Banco de horas (BH)</span>' +
+          '<span class="item"><span class="swatch" style="background:var(--tr)"></span>Trabalha no recesso (TR)</span>' +
+          '<span class="item"><span class="swatch" style="background:var(--danger)"></span>Excesso de férias (E)</span>' +
+          '<span class="item"><span class="swatch" style="background:var(--warn)"></span>Chefe + substituto (C)</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="grid-2">' +
+        '<div class="panel"><h2>Alertas — '+esc(equipe.nome)+'</h2>'+alertsHtml+'</div>' +
+        '<div class="panel"><h2>Saldo de férias por período</h2>' +
+          '<div style="overflow-x:auto"><table><thead><tr><th>Colaborador</th>'+years.map(function(y){return '<th>'+y+'</th>';}).join("")+'</tr></thead><tbody>'+
+          (saldoTable || '<tr><td class="empty">Sem colaboradores.</td></tr>')+
+          '</tbody></table></div>' +
+        '</div>' +
+      '</div>';
+
+    document.getElementById("sel-equipe").addEventListener("change", function(e){ state.viewEquipeId = e.target.value; renderApp(); });
+    document.getElementById("mo-prev").addEventListener("click", function(){ state.viewMonth--; if (state.viewMonth<0){state.viewMonth=11; state.viewYear--;} renderApp(); });
+    document.getElementById("mo-next").addEventListener("click", function(){ state.viewMonth++; if (state.viewMonth>11){state.viewMonth=0; state.viewYear++;} renderApp(); });
+  }
+
+  function renderIncluir(){
+    var app = document.getElementById("app");
+    var colabIds = Object.keys(state.colaboradores).sort(function(a,b){ return state.colaboradores[a].nome.localeCompare(state.colaboradores[b].nome); });
+    if (!colabIds.length){ app.innerHTML = '<div class="panel"><p class="empty">Cadastre colaboradores na aba "Equipes &amp; colaboradores" antes de incluir férias.</p></div>'; return; }
+
+    var equipesOptGroups = {};
+    colabIds.forEach(function(id){
+      var c = state.colaboradores[id];
+      var eq = state.equipes[c.equipe_id];
+      var eqNome = eq ? eq.nome : "Sem equipe";
+      (equipesOptGroups[eqNome] = equipesOptGroups[eqNome] || []).push({id:id, nome:c.nome});
+    });
+    var colabOptions = Object.keys(equipesOptGroups).sort().map(function(eqNome){
+      return '<optgroup label="'+esc(eqNome)+'">' + equipesOptGroups[eqNome].map(function(c){
+        return '<option value="'+c.id+'">'+esc(c.nome)+'</option>';
+      }).join("") + '</optgroup>';
+    }).join("");
+
+    var years = state.yearOptions();
+    var yearOptionsHtml = years.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join("");
+
+    var recentRows = Object.keys(state.ferias)
+      .map(function(id){ return Object.assign({id:id}, state.ferias[id]); })
+      .sort(function(a,b){ return (b.criado_em||"").localeCompare(a.criado_em||""); })
+      .slice(0, 12)
+      .map(function(f){
+        var c = state.colaboradores[f.colaborador_id];
+        var t = TIPOS[f.tipo] || {label:f.tipo};
+        var extra = f.tipo==="ferias" ? (" · período "+esc(f.ano_referencia)) : "";
+        return '<div class="list-row" data-ferias-id="'+f.id+'">' +
+          '<div><b>'+esc(c?c.nome:"—")+'</b><div class="meta">'+t.label+extra+' · '+fmtRange(f.inicio,f.fim)+' ('+dateRange(f.inicio,f.fim).length+' dia(s))</div></div>' +
+          '<button class="btn danger" data-action="remover-ferias" data-id="'+f.id+'">Remover</button>' +
+        '</div>';
+      }).join("");
+
+    var warnBanner = "";
+    if (state.incluirWarning){
+      warnBanner = '<div class="alert danger" style="margin-bottom:14px; flex-direction:column; align-items:stretch;">' +
+        '<div><b>Atenção antes de confirmar:</b></div>' +
+        '<ul style="margin:6px 0 10px 18px; padding:0;">' + state.incluirWarning.messages.map(function(m){ return '<li>'+esc(m)+'</li>'; }).join("") + '</ul>' +
+        '<div style="display:flex; gap:8px;">' +
+          '<button class="btn" data-action="confirmar-incluir">Confirmar mesmo assim</button>' +
+          '<button class="btn ghost" data-action="cancelar-incluir">Cancelar</button>' +
+        '</div>' +
+      '</div>';
+    }
+
+    app.innerHTML =
+      '<div class="panel">' +
+        '<h2>Incluir novo período</h2>' +
+        warnBanner +
+        '<form id="form-incluir">' +
+          '<div class="form-grid">' +
+            '<div class="field"><label for="f-colab">Colaborador</label><select id="f-colab" required>'+colabOptions+'</select></div>' +
+            '<div class="field"><label for="f-tipo">Tipo</label><select id="f-tipo">' +
+              '<option value="ferias">Férias</option><option value="licenca">Licença</option>' +
+              '<option value="bancoHoras">Banco de horas</option><option value="trabalhaRecesso">Trabalha no recesso</option>' +
+            '</select></div>' +
+            '<div class="field" id="f-ano-wrap"><label for="f-ano">Período de referência</label><select id="f-ano">'+yearOptionsHtml+'</select></div>' +
+            '<div class="field"><label for="f-inicio">Início</label><input type="date" id="f-inicio" required></div>' +
+            '<div class="field"><label for="f-fim">Fim</label><input type="date" id="f-fim" required></div>' +
+            '<div class="field"><button class="btn" type="submit">Registrar</button></div>' +
+          '</div>' +
+          '<p class="hint">O período de referência marca a qual ano de saldo de férias este período desconta.</p>' +
+        '</form>' +
+      '</div>' +
+      '<div class="panel"><h2>Registros recentes</h2>' + (recentRows || '<p class="empty">Nenhum período registrado ainda.</p>') + '</div>';
+
+    function syncAnoVisibility(){
+      var tipo = document.getElementById("f-tipo").value;
+      document.getElementById("f-ano-wrap").style.display = (tipo==="ferias") ? "" : "none";
+    }
+    document.getElementById("f-tipo").addEventListener("change", syncAnoVisibility);
+    syncAnoVisibility();
+
+    document.getElementById("form-incluir").addEventListener("submit", function(e){
+      e.preventDefault();
+      var colabId = document.getElementById("f-colab").value;
+      var tipo = document.getElementById("f-tipo").value;
+      var ano = document.getElementById("f-ano").value;
+      var inicio = document.getElementById("f-inicio").value;
+      var fim = document.getElementById("f-fim").value;
+      if (!inicio || !fim || fim < inicio){ alertaInline("Confira as datas: o fim precisa ser igual ou depois do início."); return; }
+      var colab = state.colaboradores[colabId];
+      var entry = { colaborador_id: colabId, equipe_id: colab.equipe_id, tipo: tipo, inicio: inicio, fim: fim };
+      if (tipo === "ferias") entry.ano_referencia = ano;
+
+      var messages = validarEntrada(entry);
+      if (messages.length){ state.incluirWarning = {messages: messages, pending: entry}; renderApp(); }
+      else { addFerias(entry).then(refreshAndRender); }
+    });
+
+    app.querySelectorAll('[data-action="remover-ferias"]').forEach(function(btn){
+      btn.addEventListener("click", function(){
+        if (btn.dataset.confirming){ deleteFerias(btn.dataset.id).then(refreshAndRender); }
+        else { btn.dataset.confirming = "1"; btn.textContent = "Confirmar remoção?"; setTimeout(function(){ btn.dataset.confirming=""; btn.textContent="Remover"; }, 4000); }
+      });
+    });
+    var confirmBtn = app.querySelector('[data-action="confirmar-incluir"]');
+    if (confirmBtn) confirmBtn.addEventListener("click", function(){
+      var pending = state.incluirWarning.pending;
+      state.incluirWarning = null;
+      addFerias(pending).then(refreshAndRender);
+    });
+    var cancelBtn = app.querySelector('[data-action="cancelar-incluir"]');
+    if (cancelBtn) cancelBtn.addEventListener("click", function(){ state.incluirWarning = null; renderApp(); });
+  }
+
+  function alertaInline(msg){ state.incluirWarning = {messages:[msg], pending:null}; renderApp(); }
+
+  function validarEntrada(entry){
+    var messages = [];
+    if (entry.tipo !== "ferias") return messages;
+    var equipeId = entry.equipe_id;
+    var equipe = state.equipes[equipeId];
+    var limite = equipe ? Number(equipe.limite)||1 : 1;
+    var coverage = feriasCoverageForEquipe(equipeId);
+    var novasDatas = dateRange(entry.inicio, entry.fim);
+    var diasExcesso = novasDatas.filter(function(iso){
+      var atual = (coverage[iso]||[]).filter(function(cid){ return cid !== entry.colaborador_id; }).length;
+      return (atual + 1) > limite;
+    });
+    if (diasExcesso.length){
+      messages.push("Isso ultrapassa o limite de "+limite+" pessoa(s) de férias ao mesmo tempo na equipe, em "+diasExcesso.length+" dia(s) (ex.: "+fmtBR(diasExcesso[0])+").");
+    }
+    var colab = state.colaboradores[entry.colaborador_id];
+    if (colab && (colab.papel === "chefe" || colab.papel === "substituto")){
+      var outroPapel = colab.papel === "chefe" ? "substituto" : "chefe";
+      var outros = colaboradoresDaEquipe(equipeId).filter(function(c){ return c.papel === outroPapel; });
+      var conflita = novasDatas.some(function(iso){ return outros.some(function(o){ return (coverage[iso]||[]).indexOf(o.id) >= 0; }); });
+      if (conflita) messages.push("Neste período o "+PAPEL_LABEL[outroPapel].toLowerCase()+" da equipe também está de férias.");
+    }
+    return messages;
+  }
+
+  function renderEquipes(){
+    var app = document.getElementById("app");
+    var equipeIds = Object.keys(state.equipes).sort(function(a,b){ return (state.equipes[a].nome||"").localeCompare(state.equipes[b].nome); });
+    var equipesRows = equipeIds.map(function(id){
+      var eq = state.equipes[id];
+      var n = colaboradoresDaEquipe(id).length;
+      return '<tr><td>'+esc(eq.nome)+'</td><td class="tabular">'+esc(eq.limite)+'</td><td class="muted">'+n+' colaborador(es)</td>' +
+        '<td><button class="btn danger" data-action="del-equipe" data-id="'+id+'" '+(n?"disabled title=\"Remova os colaboradores primeiro\"":"")+'>Remover</button></td></tr>';
+    }).join("");
+
+    var colabIds = Object.keys(state.colaboradores).sort(function(a,b){ return state.colaboradores[a].nome.localeCompare(state.colaboradores[b].nome); });
+    var years = state.yearOptions();
+    var thisYear = new Date().getFullYear();
+
+    var colabRows = colabIds.map(function(id){
+      var c = state.colaboradores[id];
+      var equipeSel = '<select data-action="set-equipe" data-id="'+id+'">' + equipeIds.map(function(eid){
+        return '<option value="'+eid+'"'+(eid===c.equipe_id?" selected":"")+'>'+esc(state.equipes[eid].nome)+'</option>';
+      }).join("") + '</select>';
+      var papelSel = '<select data-action="set-papel" data-id="'+id+'">' + ["servidor","chefe","substituto"].map(function(p){
+        return '<option value="'+p+'"'+(p===c.papel?" selected":"")+'>'+PAPEL_LABEL[p]+'</option>';
+      }).join("") + '</select>';
+      var emailInput = '<input type="email" placeholder="email@gmail.com" style="width:170px" value="'+esc(c.email||"")+'" data-action="set-email" data-id="'+id+'">';
+      var saldosInputs = years.map(function(y){
+        var v = (c.saldos && c.saldos[y]!=null) ? c.saldos[y] : "";
+        return '<input type="number" min="0" style="width:56px" value="'+esc(v)+'" data-action="set-saldo" data-id="'+id+'" data-year="'+y+'" title="Saldo '+y+'">';
+      }).join(" ");
+      return '<tr>' +
+        '<td>'+esc(c.nome)+'<div class="meta muted">Matrícula '+esc(c.matricula)+'</div></td>' +
+        '<td>'+emailInput+'</td>' +
+        '<td>'+equipeSel+'</td>' +
+        '<td>'+papelSel+'</td>' +
+        '<td class="tabular">'+saldosInputs+'</td>' +
+        '<td><button class="btn danger" data-action="del-colab" data-id="'+id+'">Remover</button></td>' +
+      '</tr>';
+    }).join("");
+
+    app.innerHTML =
+      '<div class="panel">' +
+        '<div class="panel-head"><h2>Equipes</h2></div>' +
+        '<table><thead><tr><th>Nome</th><th>Limite simultâneo</th><th>Colaboradores</th><th></th></tr></thead>' +
+        '<tbody>'+(equipesRows || '<tr><td class="empty" colspan="4">Nenhuma equipe ainda.</td></tr>')+'</tbody></table>' +
+        '<form id="form-equipe" class="form-grid" style="margin-top:16px;">' +
+          '<div class="field"><label for="eq-nome">Nova equipe</label><input id="eq-nome" placeholder="ex.: NUAU" required></div>' +
+          '<div class="field"><label for="eq-limite">Limite simultâneo</label><input id="eq-limite" type="number" min="1" value="1" required></div>' +
+          '<div class="field"><button class="btn secondary" type="submit">Adicionar equipe</button></div>' +
+        '</form>' +
+      '</div>' +
+      '<div class="panel">' +
+        '<div class="panel-head"><h2>Colaboradores</h2><span class="muted">O e-mail cadastrado é o que dá acesso ao sistema (login Google)</span></div>' +
+        '<div style="overflow-x:auto"><table><thead><tr><th>Nome</th><th>E-mail (login)</th><th>Equipe</th><th>Papel</th><th>Saldo ('+years.join(" / ")+')</th><th></th></tr></thead>' +
+        '<tbody>'+(colabRows || '<tr><td class="empty" colspan="6">Nenhum colaborador ainda.</td></tr>')+'</tbody></table></div>' +
+        '<form id="form-colab" class="form-grid" style="margin-top:16px;">' +
+          '<div class="field"><label for="cl-nome">Nome</label><input id="cl-nome" required></div>' +
+          '<div class="field"><label for="cl-mat">Matrícula</label><input id="cl-mat" required></div>' +
+          '<div class="field"><label for="cl-email">E-mail Google</label><input id="cl-email" type="email" placeholder="email@gmail.com"></div>' +
+          '<div class="field"><label for="cl-equipe">Equipe</label><select id="cl-equipe">'+equipeIds.map(function(eid){ return '<option value="'+eid+'">'+esc(state.equipes[eid].nome)+'</option>'; }).join("")+'</select></div>' +
+          '<div class="field"><label for="cl-papel">Papel</label><select id="cl-papel">'+["servidor","chefe","substituto"].map(function(p){return '<option value="'+p+'">'+PAPEL_LABEL[p]+'</option>';}).join("")+'</select></div>' +
+          '<div class="field"><label for="cl-saldo">Saldo inicial ('+thisYear+')</label><input id="cl-saldo" type="number" min="0" value="30"></div>' +
+          '<div class="field"><button class="btn secondary" type="submit">Adicionar colaborador</button></div>' +
+        '</form>' +
+        (equipeIds.length ? "" : '<p class="hint">Crie uma equipe antes de cadastrar colaboradores.</p>') +
+      '</div>';
+
+    document.getElementById("form-equipe").addEventListener("submit", function(e){
+      e.preventDefault();
+      var nome = document.getElementById("eq-nome").value.trim();
+      var limite = Number(document.getElementById("eq-limite").value) || 1;
+      if (!nome) return;
+      var id = nome.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"") || ("equipe-"+Date.now());
+      saveEquipe(id, {nome:nome, limite:limite}).then(refreshAndRender);
+      e.target.reset();
+    });
+
+    if (equipeIds.length){
+      document.getElementById("form-colab").addEventListener("submit", function(e){
+        e.preventDefault();
+        var nome = document.getElementById("cl-nome").value.trim();
+        var mat = document.getElementById("cl-mat").value.trim();
+        var email = document.getElementById("cl-email").value.trim() || null;
+        var equipeId = document.getElementById("cl-equipe").value;
+        var papel = document.getElementById("cl-papel").value;
+        var saldoInicial = Number(document.getElementById("cl-saldo").value) || 0;
+        if (!nome || !mat) return;
+        var id = mat.replace(/[^a-zA-Z0-9]/g,"") || ("colab-"+Date.now());
+        var saldos = {}; saldos[String(thisYear)] = saldoInicial;
+        saveColaborador(id, {nome:nome, matricula:mat, email:email, equipe_id:equipeId, papel:papel, saldos:saldos}).then(refreshAndRender);
+        e.target.reset();
+      });
+    }
+
+    app.querySelectorAll('[data-action="del-equipe"]').forEach(function(btn){ btn.addEventListener("click", function(){ if (!btn.disabled) deleteEquipe(btn.dataset.id).then(refreshAndRender); }); });
+    app.querySelectorAll('[data-action="del-colab"]').forEach(function(btn){
+      btn.addEventListener("click", function(){
+        if (btn.dataset.confirming){ deleteColaborador(btn.dataset.id).then(refreshAndRender); }
+        else { btn.dataset.confirming="1"; btn.textContent="Confirmar?"; setTimeout(function(){btn.dataset.confirming="";btn.textContent="Remover";},4000); }
+      });
+    });
+    app.querySelectorAll('[data-action="set-equipe"]').forEach(function(sel){
+      sel.addEventListener("change", function(){ saveColaborador(sel.dataset.id, {equipe_id: sel.value}).then(refreshAndRender); });
+    });
+    app.querySelectorAll('[data-action="set-papel"]').forEach(function(sel){
+      sel.addEventListener("change", function(){ saveColaborador(sel.dataset.id, {papel: sel.value}).then(refreshAndRender); });
+    });
+    app.querySelectorAll('[data-action="set-email"]').forEach(function(inp){
+      inp.addEventListener("change", function(){ saveColaborador(inp.dataset.id, {email: inp.value.trim() || null}).then(refreshAndRender); });
+    });
+    app.querySelectorAll('[data-action="set-saldo"]').forEach(function(inp){
+      inp.addEventListener("change", function(){
+        var c = state.colaboradores[inp.dataset.id];
+        var saldos = Object.assign({}, c.saldos);
+        saldos[inp.dataset.year] = Number(inp.value)||0;
+        saveColaborador(inp.dataset.id, {saldos: saldos}).then(refreshAndRender);
+      });
+    });
+  }
+
+  async function refreshAndRender(){ await fetchAll(); renderApp(); }
+
+  // ---------- boot / auth ----------
+  async function boot(){
+    var { data: { session } } = await supa.auth.getSession();
+    state.session = session;
+    await handleSessionChange();
+
+    supa.auth.onAuthStateChange(function(_event, session){
+      state.session = session;
+      handleSessionChange();
+    });
+  }
+
+  var realtimeWired = false;
+  async function handleSessionChange(){
+    if (!state.session){ renderLoginGate(); return; }
+    shell.innerHTML = '<div class="empty" style="padding-top:80px; text-align:center;">Carregando…</div>';
+    await fetchAll();
+    var email = (state.session.user.email || "").toLowerCase();
+    var authorized = Object.keys(state.colaboradores).some(function(id){
+      return (state.colaboradores[id].email||"").toLowerCase() === email;
+    });
+    if (!authorized){ renderUnauthorized(); return; }
+    if (!realtimeWired){ wireRealtime(); realtimeWired = true; }
+    renderShellFrame("");
+    renderApp();
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
