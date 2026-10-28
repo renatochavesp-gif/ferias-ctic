@@ -57,3 +57,14 @@ create policy "authorized_all" on ferias for all using (private.is_authorized())
 
 -- Habilita atualização em tempo real (usada pelo index.html via supabase-js Realtime)
 alter publication supabase_realtime add table equipes, colaboradores, ferias;
+
+-- Tabela usada pela rotina .github/workflows/keep-alive.yml para gerar atividade real no
+-- banco e evitar a pausa automática do plano gratuito (7 dias sem uso). Linha única.
+create table if not exists keepalive (
+  id int primary key check (id = 1),
+  ts timestamptz not null default now()
+);
+alter table keepalive enable row level security;
+create policy "keepalive_insert" on keepalive for insert to anon with check (id = 1);
+create policy "keepalive_update" on keepalive for update to anon using (id = 1) with check (id = 1);
+create policy "keepalive_select" on keepalive for select to anon using (id = 1);
