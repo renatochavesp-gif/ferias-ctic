@@ -1,18 +1,23 @@
 name: Keep Supabase alive
 
 # O plano gratuito do Supabase pausa o projeto após 7 dias sem atividade.
-# Esta rotina faz uma consulta leve ao banco a cada 3 dias para evitar a pausa.
+# Uma simples leitura anônima não foi suficiente (o projeto pausou mesmo com ela),
+# então esta rotina grava um carimbo de data na tabela `keepalive`, o que gera
+# atividade real no banco. Roda a cada 2 dias.
 on:
   schedule:
-    - cron: "17 9 */3 * *"
+    - cron: "17 9 */2 * *"
   workflow_dispatch:
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Consulta leve ao banco
+      - name: Grava carimbo no banco
         run: |
-          curl -fsS "https://hwvwxvfdfsjcmzinvipy.supabase.co/rest/v1/equipes?select=id&limit=1" \
+          curl -fsS -X POST "https://hwvwxvfdfsjcmzinvipy.supabase.co/rest/v1/keepalive" \
             -H "apikey: sb_publishable_ptUFiY1lZgmw95pe7N_QvQ_A61XgQU6" \
-            -H "Authorization: Bearer sb_publishable_ptUFiY1lZgmw95pe7N_QvQ_A61XgQU6"
+            -H "Authorization: Bearer sb_publishable_ptUFiY1lZgmw95pe7N_QvQ_A61XgQU6" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates,return=minimal" \
+            -d "{\"id\":1,\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
